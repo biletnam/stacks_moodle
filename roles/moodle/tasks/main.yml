@@ -1,0 +1,50 @@
+---
+# Install stuff
+- name: Install moodle
+  yum:
+    name: "{{item}}"
+    state: latest
+  with_items:
+    - expect
+    - mariadb
+    - mariadb-server
+    - mariadb-devel
+    - pwgen
+    - policycoreutils-python
+    - unzip
+    - mod_ssl
+    - bind-utils
+    - whois
+    - certbot-apache
+
+- shell: pwgen 15 1
+  register: MOODLE_ROOT_PW
+
+- shell: pwgen 15 1
+  register: MOODLE_PASS
+
+- shell: pwgen 10 1
+  register: MOODLE_ADMIN_PW
+
+- name: start mariadb
+  service:
+    name: mariadb
+    state: started
+    enabled: yes
+
+- name: moodle_setup
+  command: '/bin/sh /tmp/playbook/stacks_moodle-master/roles/moodle/setup.sh'
+  environment:
+    MOODLE_ROOT_PW: "{{ MOODLE_ROOT_PW.stdout | regex_replace('(\r\n)','') }}"
+    MOODLE_PATH: "/var/www/moodle"
+    MOODLE_DBNAME: "moodle"
+    MOODLE_HOST: "localhost"
+    MOODLE_USER: "moodle"
+    MOODLE_PASS: "moodle"
+    MOODLE_ADMIN_PW: "{{ MOODLE_ADMIN_PW.stdout | regex_replace('(\r\n)','') }}"
+
+- name: start httpd
+  service:
+    name: httpd
+    state: started
+    enabled: yes
